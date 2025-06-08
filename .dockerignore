@@ -2,7 +2,7 @@
 node_modules
 
 # Ignore local database file, the container will create its own
-database/data.db
+# database/data.db
 
 # Ignore npm logs
 npm-debug.log
