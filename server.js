@@ -1,30 +1,23 @@
 const express = require("express");
 const { Sequelize, DataTypes } = require("sequelize");
-const path = require("path");
+// No longer need 'path' for the database
+// const path = require('path');
 
 // --- Basic Setup ---
 const app = express();
-const PORT = 3000;
-app.use(express.json()); // Middleware to parse JSON request bodies
+const PORT = process.env.PORT || 3000; // Use Render's port or 3000 for local
+app.use(express.json());
 
-// --- Database Connection (Sequelize) ---
-// We will store the database file in the 'database' sub-directory
-const dbPath = path.join(__dirname, "database/data.db");
-const sequelize = new Sequelize({
-  dialect: "sqlite",
-  storage: dbPath,
-  logging: false, // Set to console.log to see SQL queries
-});
-
-// --- Database Model ---
-// This defines an 'Item' table with name and description columns.
-const Item = sequelize.define("Item", {
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  description: {
-    type: DataTypes.STRING,
+// --- Database Connection (Sequelize for PostgreSQL) ---
+// The connection string will be provided by Render via the DATABASE_URL environment variable
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: "postgres",
+  protocol: "postgres",
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false, // Required for Render's internal connections
+    },
   },
 });
 
@@ -93,11 +86,9 @@ app.delete("/items/:id", async (req, res) => {
     const item = await Item.findByPk(req.params.id);
     if (item) {
       await item.destroy();
-      res
-        .status(200)
-        .json({
-          message: `Item with id ${req.params.id} deleted successfully.`,
-        });
+      res.status(200).json({
+        message: `Item with id ${req.params.id} deleted successfully.`,
+      });
     } else {
       res.status(404).json({ error: "Item not found" });
     }
@@ -110,16 +101,20 @@ app.delete("/items/:id", async (req, res) => {
 // We use an async function to ensure the database is synced before the server starts.
 const startServer = async () => {
   try {
-    // This creates the table if it doesn't exist
+    // Test the database connection
+    await sequelize.authenticate();
+    console.log("Database connection has been established successfully.");
+
+    // Sync the model with the database
     await sequelize.sync();
     console.log("Database synced successfully.");
 
-    // The '0.0.0.0' host is crucial for Docker to map the port correctly
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server is running on http://localhost:${PORT}`);
+    app.listen(PORT, () => {
+      // Note: We removed '0.0.0.0' as Render handles this automatically.
+      console.log(`Server is running on port ${PORT}`);
     });
   } catch (error) {
-    console.error("Unable to connect to the database:", error);
+    console.error("Unable to connect to the database or start server:", error);
   }
 };
 
