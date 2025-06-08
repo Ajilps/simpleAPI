@@ -1,0 +1,8 @@
+# Ignore dependencies, as they are installed inside the container
+node_modules
+
+# Ignore local database file, the container will create its own
+database/data.db
+
+# Ignore npm logs
+npm-debug.log
