@@ -20,7 +20,7 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
 });
 
 // --- Database Model (with Validation) ---
-const Item = sequelize.define('Student', {
+const Item = sequelize.define('Students', {
   name: {
     type: DataTypes.STRING,
     allowNull: false,
