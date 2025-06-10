@@ -3,19 +3,15 @@ const { Sequelize, DataTypes } = require("sequelize");
 
 // --- Basic Setup ---
 const app = express();
-// Use the PORT environment variable provided by Render, or 3000 for local development
 const PORT = process.env.PORT || 3000;
-// Middleware to parse JSON request bodies
 app.use(express.json());
 
 // --- Database Connection (Sequelize for PostgreSQL) ---
-// The connection string is provided by Render via the DATABASE_URL environment variable.
 const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: "postgres",
   protocol: "postgres",
-  logging: false, // Set to true to see SQL queries in logs
+  logging: false,
   dialectOptions: {
-    // This is required for connecting to Render's PostgreSQL databases
     ssl: {
       require: true,
       rejectUnauthorized: false,
@@ -23,22 +19,44 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
   },
 });
 
-// --- Database Model ---
-// This defines the 'Item' table in our database.
-const Item = sequelize.define("Item", {
+// --- Database Model (with Validation) ---
+const Item = sequelize.define("Students", {
   name: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: {
+      notEmpty: { msg: "Name field cannot be empty." },
+    },
+  },
+  rollNumber: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  className: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  phoneNumber: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  imageUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    validate: {
+      // isUrl is a built-in validator, but it's very strict.
+      // A custom validator might be better if you allow non-standard URLs.
+      isUrl: { msg: "Image URL must be a valid URL format." },
+    },
   },
   description: {
     type: DataTypes.STRING,
-    // allowNull defaults to true, so this can be omitted if description is optional
+    allowNull: true,
   },
 });
 
 // --- API Endpoints ---
 
-// A simple welcome message for the root endpoint
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to the Node.js, Express, and Sequelize API!" });
 });
@@ -72,12 +90,24 @@ app.get("/items/:id", async (req, res) => {
 // POST (create) a new item
 app.post("/items", async (req, res) => {
   try {
-    if (!req.body.name) {
-      return res.status(400).json({ error: 'The "name" field is required.' });
-    }
-    const newItem = await Item.create(req.body);
+    // Destructure to prevent mass assignment vulnerability
+    const { name, description, rollNumber, className, phoneNumber, imageUrl } =
+      req.body;
+    const newItem = await Item.create({
+      name,
+      description,
+      rollNumber,
+      className,
+      phoneNumber,
+      imageUrl,
+    });
     res.status(201).json(newItem);
   } catch (error) {
+    // Catch validation errors from the model
+    if (error.name === "SequelizeValidationError") {
+      const messages = error.errors.map((err) => err.message);
+      return res.status(400).json({ errors: messages });
+    }
     console.error("Error creating item:", error);
     res.status(500).json({ error: "Failed to create the item" });
   }
@@ -88,12 +118,35 @@ app.put("/items/:id", async (req, res) => {
   try {
     const item = await Item.findByPk(req.params.id);
     if (item) {
-      await item.update(req.body);
+      // Destructure to prevent mass assignment vulnerability
+      const {
+        name,
+        description,
+        rollNumber,
+        className,
+        phoneNumber,
+        imageUrl,
+      } = req.body;
+      const updatedData = {
+        name,
+        description,
+        rollNumber,
+        className,
+        phoneNumber,
+        imageUrl,
+      };
+
+      await item.update(updatedData);
       res.json(item);
     } else {
       res.status(404).json({ error: "Item not found" });
     }
   } catch (error) {
+    // Catch validation errors from the model
+    if (error.name === "SequelizeValidationError") {
+      const messages = error.errors.map((err) => err.message);
+      return res.status(400).json({ errors: messages });
+    }
     console.error(`Error updating item ${req.params.id}:`, error);
     res.status(500).json({ error: "Failed to update the item" });
   }
@@ -105,9 +158,8 @@ app.delete("/items/:id", async (req, res) => {
     const item = await Item.findByPk(req.params.id);
     if (item) {
       await item.destroy();
-      res.status(200).json({
-        message: `Item with id ${req.params.id} deleted successfully.`,
-      });
+      // Using 204 No Content is a common, good practice for DELETE
+      res.status(204).send();
     } else {
       res.status(404).json({ error: "Item not found" });
     }
@@ -118,15 +170,13 @@ app.delete("/items/:id", async (req, res) => {
 });
 
 // --- Start Server ---
-// We use an async function to ensure the database is synced before the server starts.
 const startServer = async () => {
   try {
-    // Test the database connection
     await sequelize.authenticate();
     console.log("Database connection has been established successfully.");
 
-    // Sync the model with the database, creating the 'Items' table if it doesn't exist
-    await sequelize.sync({ alter: true }); // Using 'alter: true' is safe for development
+    // IMPORTANT: sync() is great for development. For production, use migrations.
+    await sequelize.sync({ alter: true });
     console.log("Database models synced successfully.");
 
     app.listen(PORT, () => {
@@ -134,7 +184,6 @@ const startServer = async () => {
     });
   } catch (error) {
     console.error("Unable to connect to the database or start server:", error);
-    // Ensure the process exits if the database connection fails
     process.exit(1);
   }
 };
