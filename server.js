@@ -18,22 +18,22 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
     // This is required for connecting to Render's PostgreSQL databases
     ssl: {
       require: true,
-      rejectUnauthorized: false, 
+      rejectUnauthorized: false,
     },
   },
 });
 
 // --- Database Model ---
 // This defines the 'Item' table in our database.
-const Item = sequelize.define('Item', {
+const Item = sequelize.define("Item", {
   name: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
   },
   description: {
     type: DataTypes.STRING,
     // allowNull defaults to true, so this can be omitted if description is optional
-  }
+  },
 });
 
 // --- API Endpoints ---
@@ -135,7 +135,7 @@ const startServer = async () => {
   } catch (error) {
     console.error("Unable to connect to the database or start server:", error);
     // Ensure the process exits if the database connection fails
-    process.exit(1); 
+    process.exit(1);
   }
 };
 
