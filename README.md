@@ -1,6 +1,4 @@
-Of course! Based on the excellent code changes we made, the documentation needs a significant update to reflect the new fields, validation rules, and response formats.
 
-Here is the revised API documentation. The key changes are highlighted for your reference.
 
 ---
 
