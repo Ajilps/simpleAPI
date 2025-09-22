@@ -8,7 +8,7 @@ This document outlines the available endpoints for managing "items" in the datab
 
 **Base URL**
 
-*   **Live Server URL**: `https://simpleapi-gayv.onrender.com`
+*   **Live Server URL**:  `https://simpleapi-gayv.onrender.com`
 
 **Item Object**
 
