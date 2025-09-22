@@ -6,9 +6,7 @@
 
 This document outlines the available endpoints for managing "items" in the database.
 
-**Base URL**
 
-*   **Live Server URL**:  `https://simpleapi-gayv.onrender.com`
 
 **Item Object**
 
